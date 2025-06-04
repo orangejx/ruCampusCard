@@ -116,20 +116,28 @@ const submitForm = async (formEl) => {
         loading.value = true
         // 调用充值API，传递正数表示充值
         const response = await axios.put(`${import.meta.env.VITE_API_BASE_URL}/cards/student/${form.studentId}/balance`, {
-          amount: form.amount
+          amount: form.amount,
+          // type: 'RECHARGE',
+          // description: `通过${form.paymentMethod === 'alipay' ? '支付宝' : form.paymentMethod === 'wechat' ? '微信支付' : '银行卡'}充值`
         })
 
-        resultInfo.success = true
-        resultInfo.title = '充值成功'
-        resultInfo.subTitle = `已成功向学生ID为 ${form.studentId} 的校园卡充值 ¥${form.amount}`
+        if (response.data.code === 200) {
+          resultInfo.success = true
+          resultInfo.title = '充值成功'
+          resultInfo.subTitle = `已成功向学生ID为 ${form.studentId} 的校园卡充值 ¥${form.amount}，${response.data.msg}`
 
-        dialogVisible.value = true
-        resetForm(formEl)
+          dialogVisible.value = true
+          resetForm(formEl)
+        } else {
+          resultInfo.success = false
+          resultInfo.title = '充值失败'
+          resultInfo.subTitle = response.data.msg || '请检查学生ID是否正确'
+          dialogVisible.value = true
+        }
       } catch (error) {
         resultInfo.success = false
         resultInfo.title = '充值失败'
-        resultInfo.subTitle = error.message || '请检查学生ID是否正确'
-
+        resultInfo.subTitle = error.response?.data?.msg || error.message || '请检查学生ID是否正确'
         dialogVisible.value = true
       } finally {
         loading.value = false

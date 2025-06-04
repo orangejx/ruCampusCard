@@ -142,15 +142,24 @@ const fetchCardInfo = async () => {
 
   try {
     const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/cards/student/${form.studentId}`)
-    cardInfo.value = response.data
-
-    if (response.status === 'INACTIVE') {
-      ElMessage.warning('该校园卡已注销，无法进行消费')
+    if (response.data.code === 200) {
+      if (response.data.data) {
+        cardInfo.value = response.data.data
+        if (cardInfo.value.status === 'INACTIVE') {
+          ElMessage.warning('该校园卡已注销，无法进行消费')
+          cardInfo.value = null
+        }
+      } else {
+        cardInfo.value = null
+        ElMessage.warning('未找到校园卡信息')
+      }
+    } else {
       cardInfo.value = null
+      ElMessage.error(response.data.msg || '获取校园卡信息失败')
     }
   } catch (error) {
     cardInfo.value = null
-    ElMessage.error(error.message || '获取校园卡信息失败')
+    ElMessage.error(error.response?.data?.msg || error.message || '获取校园卡信息失败')
   }
 }
 
@@ -173,21 +182,29 @@ const submitForm = async (formEl) => {
         loading.value = true
         // 调用消费API，传递负数表示消费
         const response = await axios.put(`${import.meta.env.VITE_API_BASE_URL}/cards/student/${form.studentId}/balance`, {
-        amount: -form.amount
-      })
+          amount: -form.amount,
+          // type: form.consumeType,
+          // description: form.description
+        })
 
-        resultInfo.success = true
-        resultInfo.title = '消费成功'
-        resultInfo.subTitle = `已成功从学生ID为 ${form.studentId} 的校园卡扣除 ¥${form.amount}`
+        if (response.data.code === 200) {
+          resultInfo.success = true
+          resultInfo.title = '消费成功'
+          resultInfo.subTitle = `已成功从学生ID为 ${form.studentId} 的校园卡扣除 ¥${form.amount}，${response.data.msg}`
 
-        dialogVisible.value = true
-        resetForm(formEl)
-        cardInfo.value = null
+          dialogVisible.value = true
+          resetForm(formEl)
+          cardInfo.value = null
+        } else {
+          resultInfo.success = false
+          resultInfo.title = '消费失败'
+          resultInfo.subTitle = response.data.msg || '请检查卡片状态或余额是否充足'
+          dialogVisible.value = true
+        }
       } catch (error) {
         resultInfo.success = false
         resultInfo.title = '消费失败'
-        resultInfo.subTitle = error.message || '请检查卡片状态或余额是否充足'
-
+        resultInfo.subTitle = error.response?.data?.msg || error.message || '请检查卡片状态或余额是否充足'
         dialogVisible.value = true
       } finally {
         loading.value = false

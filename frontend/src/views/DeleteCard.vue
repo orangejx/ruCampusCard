@@ -169,16 +169,25 @@ const fetchCardInfo = async () => {
 
   try {
     const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/cards/student/${form.studentId}`)
-    cardInfo.value = response.data
-
-    if (response.status === 'INACTIVE') {
-      ElMessage.warning('该校园卡已经被注销')
-    } else if (response.balance > 0) {
-      ElMessage.warning('该卡还有余额，建议先处理余额后再注销')
+    if (response.data.code === 200) {
+      if (response.data.data) {
+        cardInfo.value = response.data.data
+        if (cardInfo.value.status === 'INACTIVE') {
+          ElMessage.warning('该校园卡已经被注销')
+        } else if (cardInfo.value.balance > 0) {
+          ElMessage.warning('该卡还有余额，建议先处理余额后再注销')
+        }
+      } else {
+        cardInfo.value = null
+        ElMessage.warning('未找到校园卡信息')
+      }
+    } else {
+      cardInfo.value = null
+      ElMessage.error(response.data.msg || '获取校园卡信息失败')
     }
   } catch (error) {
     cardInfo.value = null
-    ElMessage.error(error.message || '获取校园卡信息失败')
+    ElMessage.error(error.response?.data?.msg || error.message || '获取校园卡信息失败')
   }
 }
 
@@ -199,18 +208,27 @@ const submitForm = async (formEl) => {
 
       try {
         loading.value = true
-        await axios.delete(`${import.meta.env.VITE_API_BASE_URL}/cards/student/${form.studentId}`)
+        const response = await axios.delete(`${import.meta.env.VITE_API_BASE_URL}/cards/student/${form.studentId}`, {
+          data: {
+            reason: form.reason
+          }
+        })
 
-        resultInfo.success = true
-        resultInfo.title = '注销成功'
-        resultInfo.subTitle = `学生ID为 ${form.studentId} 的校园卡已成功注销`
-
-        dialogVisible.value = true
+        if (response.data.code === 200) {
+          resultInfo.success = true
+          resultInfo.title = '注销成功'
+          resultInfo.subTitle = `学生ID为 ${form.studentId} 的校园卡已成功注销。${response.data.msg}`
+          dialogVisible.value = true
+        } else {
+          resultInfo.success = false
+          resultInfo.title = '注销失败'
+          resultInfo.subTitle = response.data.msg || '注销过程中发生错误'
+          dialogVisible.value = true
+        }
       } catch (error) {
         resultInfo.success = false
         resultInfo.title = '注销失败'
-        resultInfo.subTitle = error.message || '注销过程中发生错误'
-
+        resultInfo.subTitle = error.response?.data?.msg || error.message || '注销过程中发生错误'
         dialogVisible.value = true
       } finally {
         loading.value = false

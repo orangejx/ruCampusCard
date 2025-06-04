@@ -79,15 +79,21 @@ const submitForm = async (formEl) => {
           balance: form.balance
         })
 
-        ElMessage({
-          message: '校园卡创建成功',
-          type: 'success'
-        })
-
-        resetForm(formEl)
+        if (response.data.code === 200) {
+          ElMessage({
+            message: response.data.msg || '校园卡创建成功',
+            type: 'success'
+          })
+          resetForm(formEl)
+        } else {
+          ElMessage({
+            message: response.data.msg || '校园卡创建失败',
+            type: 'error'
+          })
+        }
       } catch (error) {
         ElMessage({
-          message: error.message || '校园卡创建失败',
+          message: error.response?.data?.msg || error.message || '校园卡创建失败',
           type: 'error'
         })
       } finally {

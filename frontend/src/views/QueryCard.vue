@@ -110,15 +110,29 @@ const handleSearch = async () => {
     loading.value = true
     showEmpty.value = false
     const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/cards/student/${searchForm.studentId}`)
-    cardInfo.value = response.data
-    // 这里假设API返回的数据中包含了交易记录
-    // 实际项目中可能需要单独调用获取交易记录的API
-    transactions.value = response.data.transactions || []
+    if (response.data.code === 200) {
+      if (response.data.data) {
+        cardInfo.value = response.data.data
+        // 这里假设API返回的数据中包含了交易记录
+        // 实际项目中可能需要单独调用获取交易记录的API
+        transactions.value = response.data.data.transactions || []
+      } else {
+        cardInfo.value = null
+        transactions.value = []
+        showEmpty.value = true
+        ElMessage.warning('未找到相关校园卡信息')
+      }
+    } else {
+      cardInfo.value = null
+      transactions.value = []
+      showEmpty.value = true
+      ElMessage.error(response.data.msg || '查询失败')
+    }
   } catch (error) {
     cardInfo.value = null
     transactions.value = []
     showEmpty.value = true
-    ElMessage.error(error.message || '查询失败')
+    ElMessage.error(error.response?.data?.msg || error.message || '查询失败')
   } finally {
     loading.value = false
   }
