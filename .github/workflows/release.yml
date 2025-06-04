@@ -34,11 +34,11 @@ jobs:
           npm run build
       
       # 移动前端构建产物到static目录
-      - name: Move Frontend Build
-        run: |
-          rm -rf src/main/resources/static
-          mkdir -p src/main/resources/static
-          cp -r frontend/dist/* src/main/resources/static/
+#      - name: Move Frontend Build
+#        run: |
+#          rm -rf src/main/resources/static
+#          mkdir -p src/main/resources/static
+#          cp -r frontend/dist/* src/main/resources/static/
       
       # 设置Java环境
       - name: Setup Java
