@@ -1,9 +1,11 @@
 package com.rucc.campuscard.controller;
 
 import com.rucc.campuscard.common.ApiResponse;
+import com.rucc.campuscard.dto.CardDTO;
 import com.rucc.campuscard.dto.CreateCardRequest;
 import com.rucc.campuscard.entity.Card;
 import com.rucc.campuscard.model.dto.*;
+import com.rucc.campuscard.util.CardMapper;
 import org.springframework.data.domain.Page;
 import com.rucc.campuscard.service.CardService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -26,6 +28,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/cards")
 @Tag(name = "校园卡管理", description = "提供校园卡的创建、查询、更新、删除等完整的管理功能")
+@io.swagger.v3.oas.annotations.security.SecurityRequirement(name = "bearerAuth")
 public class CardController {
     private static final Logger logger = LoggerFactory.getLogger(CardController.class);
 
@@ -43,7 +46,7 @@ public class CardController {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "请求参数错误，例如：学生已有校园卡、余额为负数等",
             content = @io.swagger.v3.oas.annotations.media.Content(schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = com.rucc.campuscard.common.ApiResponse.class)))
     })
-    public ResponseEntity<ApiResponse<Card>> createCard(
+    public ResponseEntity<ApiResponse<CardDTO>> createCard(
             @RequestBody @Parameter(description = "创建校园卡请求") CreateCardRequest request) {
         logger.info("收到创建校园卡请求 - studentId: {}, studentName: {}", request.getStudentId(), request.getStudentName());
         try {
@@ -60,9 +63,10 @@ public class CardController {
                 }
             }
             Card card = cardService.createCard(request.getStudentId(), request.getStudentName(), balance);
+            CardDTO cardDTO = CardMapper.toDTO(card);
             logger.info("成功创建校园卡 - cardId: {}, studentId: {}", card.getId(), request.getStudentId());
             return ResponseEntity.status(HttpStatus.CREATED)
-                    .body(ApiResponse.success(card));
+                    .body(ApiResponse.success(cardDTO));
         } catch (IllegalStateException e) {
             logger.error("创建校园卡失败 - studentId: {}, 错误: {}", request.getStudentId(), e.getMessage());
             return ResponseEntity.badRequest()
@@ -78,11 +82,12 @@ public class CardController {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "校园卡不存在",
             content = @io.swagger.v3.oas.annotations.media.Content(schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = com.rucc.campuscard.common.ApiResponse.class)))
     })
-    public ResponseEntity<ApiResponse<Card>> getCard(
+    public ResponseEntity<ApiResponse<CardDTO>> getCard(
             @PathVariable @Parameter(description = "校园卡ID") UUID id) {
         try {
             Card card = cardService.getCard(id);
-            return ResponseEntity.ok(ApiResponse.success(card));
+            CardDTO cardDTO = CardMapper.toDTO(card);
+            return ResponseEntity.ok(ApiResponse.success(cardDTO));
         } catch (NoSuchElementException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(ApiResponse.error(HttpStatus.NOT_FOUND.value(), "校园卡不存在"));
@@ -97,11 +102,12 @@ public class CardController {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "未找到该学生的校园卡",
             content = @io.swagger.v3.oas.annotations.media.Content(schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = com.rucc.campuscard.common.ApiResponse.class)))
     })
-    public ResponseEntity<ApiResponse<Card>> getCardByStudentId(
+    public ResponseEntity<ApiResponse<CardDTO>> getCardByStudentId(
             @PathVariable @Parameter(description = "学生ID") String studentId) {
         try {
             Card card = cardService.getCardByStudentId(studentId);
-            return ResponseEntity.ok(ApiResponse.success(card));
+            CardDTO cardDTO = CardMapper.toDTO(card);
+            return ResponseEntity.ok(ApiResponse.success(cardDTO));
         } catch (NoSuchElementException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(ApiResponse.error(HttpStatus.NOT_FOUND.value(), "未找到该学生的校园卡"));
@@ -118,12 +124,13 @@ public class CardController {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "校园卡不存在",
             content = @io.swagger.v3.oas.annotations.media.Content(schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = com.rucc.campuscard.common.ApiResponse.class)))
     })
-    public ResponseEntity<ApiResponse<Card>> updateBalance(
+    public ResponseEntity<ApiResponse<CardDTO>> updateBalance(
             @PathVariable @Parameter(description = "校园卡ID") UUID id,
             @RequestBody @Parameter(description = "金额变化") UpdateBalanceDTO request) {
         try {
             Card card = cardService.updateBalance(id, request.getAmount());
-            return ResponseEntity.ok(ApiResponse.success(card));
+            CardDTO cardDTO = CardMapper.toDTO(card);
+            return ResponseEntity.ok(ApiResponse.success(cardDTO));
         } catch (NoSuchElementException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(ApiResponse.error(HttpStatus.NOT_FOUND.value(), "校园卡不存在"));
@@ -143,12 +150,13 @@ public class CardController {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "未找到该学生的校园卡",
             content = @io.swagger.v3.oas.annotations.media.Content(schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = com.rucc.campuscard.common.ApiResponse.class)))
     })
-    public ResponseEntity<ApiResponse<Card>> updateBalanceByStudentId(
+    public ResponseEntity<ApiResponse<CardDTO>> updateBalanceByStudentId(
             @PathVariable @Parameter(description = "学生ID") String studentId,
             @RequestBody @Parameter(description = "金额变化") UpdateBalanceDTO request) {
         try {
             Card card = cardService.updateBalanceByStudentId(studentId, request.getAmount());
-            return ResponseEntity.ok(ApiResponse.success(card));
+            CardDTO cardDTO = CardMapper.toDTO(card);
+            return ResponseEntity.ok(ApiResponse.success(cardDTO));
         } catch (NoSuchElementException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(ApiResponse.error(HttpStatus.NOT_FOUND.value(), "未找到该学生的校园卡"));
@@ -161,12 +169,13 @@ public class CardController {
 
     @PutMapping("/{id}/name")
     @Operation(summary = "更新学生姓名", description = "更新指定校园卡关联的学生姓名")
-    public ResponseEntity<ApiResponse<Card>> updateStudentName(
+    public ResponseEntity<ApiResponse<CardDTO>> updateStudentName(
             @PathVariable @Parameter(description = "校园卡ID") UUID id,
             @RequestParam @Parameter(description = "新学生姓名") String studentName) {
         try {
             Card card = cardService.updateStudentName(id, studentName);
-            return ResponseEntity.ok(ApiResponse.success(card));
+            CardDTO cardDTO = CardMapper.toDTO(card);
+            return ResponseEntity.ok(ApiResponse.success(cardDTO));
         } catch (NoSuchElementException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(ApiResponse.error(HttpStatus.NOT_FOUND.value(), "校园卡不存在"));
@@ -178,12 +187,13 @@ public class CardController {
 
     @PutMapping("/student/{studentId}/name")
     @Operation(summary = "根据学生ID更新姓名", description = "根据学生ID更新学生姓名")
-    public ResponseEntity<ApiResponse<Card>> updateStudentNameByStudentId(
+    public ResponseEntity<ApiResponse<CardDTO>> updateStudentNameByStudentId(
             @PathVariable @Parameter(description = "学生ID") String studentId,
             @RequestParam @Parameter(description = "新学生姓名") String studentName) {
         try {
             Card card = cardService.updateStudentNameByStudentId(studentId, studentName);
-            return ResponseEntity.ok(ApiResponse.success(card));
+            CardDTO cardDTO = CardMapper.toDTO(card);
+            return ResponseEntity.ok(ApiResponse.success(cardDTO));
         } catch (NoSuchElementException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(ApiResponse.error(HttpStatus.NOT_FOUND.value(), "未找到该学生的校园卡"));
@@ -221,13 +231,14 @@ public class CardController {
 
     @PostMapping("/search")
     @Operation(summary = "搜索校园卡", description = "搜索校园卡，支持分页和过滤")
-    public ResponseEntity<ApiResponse<Page<Card>>> searchCards(
+    public ResponseEntity<ApiResponse<Page<CardDTO>>> searchCards(
             @RequestBody @Parameter(description = "搜索条件") CardSearchRequest request) {
         Page<Card> cards = cardService.getAllCards(
             request.getPage(),
             request.getSize(),
             request.getStudentId(),
             request.getStudentName());
-        return ResponseEntity.ok(ApiResponse.success(cards));
+        Page<CardDTO> cardDTOs = cards.map(CardMapper::toDTO);
+        return ResponseEntity.ok(ApiResponse.success(cardDTOs));
     }
 }

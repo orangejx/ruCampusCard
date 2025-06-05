@@ -1,6 +1,7 @@
 package com.rucc.campuscard.service.impl;
 
 import com.rucc.campuscard.entity.Card;
+import com.rucc.campuscard.entity.CardStatus;
 import com.rucc.campuscard.service.CardService;
 import com.rucc.campuscard.service.CacheService;
 import org.springframework.stereotype.Service;
@@ -17,13 +18,62 @@ import org.springframework.data.domain.PageRequest;
 @Service
 public class CardServiceImpl implements CardService {
 
-    private static final String CARDS_KEY = "cards";
+    private static final String CARD_PREFIX = "card:";
     private static final String STUDENT_CARDS_KEY = "student_cards";
 
     private final CacheService cacheService;
 
     public CardServiceImpl(CacheService cacheService) {
         this.cacheService = cacheService;
+    }
+
+    /**
+     * 获取卡片的Redis键
+     * @param cardId 卡片ID
+     * @return Redis键
+     */
+    private String getCardKey(UUID cardId) {
+        return CARD_PREFIX + cardId.toString();
+    }
+
+    /**
+     * 从Redis Hash中构建Card对象
+     * @param cardKey 卡片键
+     * @return Card对象
+     */
+    private Card buildCardFromHash(String cardKey) {
+        Map<Object, Object> cardData = cacheService.hgetAll(cardKey);
+        if (cardData == null || cardData.isEmpty()) {
+            return null;
+        }
+
+        Card card = new Card();
+        card.setId(UUID.fromString(cardData.get("id").toString()));
+        card.setStudentId(cardData.get("studentId").toString());
+        card.setStudentName(cardData.get("studentName").toString());
+        card.setBalance(new BigDecimal(cardData.get("balance").toString()));
+        card.setStatus(CardStatus.valueOf(cardData.get("status").toString()));
+        card.setCreatedAt(Long.parseLong(cardData.get("createdAt").toString()));
+        card.setUpdatedAt(Long.parseLong(cardData.get("updatedAt").toString()));
+        
+        return card;
+    }
+
+    /**
+     * 将Card对象转换为Hash字段映射
+     * @param card Card对象
+     * @return Hash字段映射
+     */
+    private Map<String, Object> cardToHashMap(Card card) {
+        Map<String, Object> hash = new HashMap<>();
+        hash.put("id", card.getId().toString());
+        hash.put("studentId", card.getStudentId());
+        hash.put("studentName", card.getStudentName());
+        hash.put("balance", card.getBalance().toString());
+        hash.put("status", card.getStatus().toString());
+        hash.put("createdAt", String.valueOf(card.getCreatedAt()));
+        hash.put("updatedAt", String.valueOf(card.getUpdatedAt()));
+        return hash;
     }
 
     @Override
@@ -39,18 +89,23 @@ public class CardServiceImpl implements CardService {
             balance.setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO;
         Card card = new Card(studentId, studentName, initialBalance);
         
-        // 保存卡片信息
-        cacheService.hset(CARDS_KEY, card.getId().toString(), card);
+        // 保存卡片信息到Hash表
+        String cardKey = getCardKey(card.getId());
+        cacheService.hmset(cardKey, cardToHashMap(card));
         
         // 保存学生ID到卡片ID的映射
         cacheService.hset(STUDENT_CARDS_KEY, studentId, card.getId().toString());
+        
+        // 添加卡片ID到集合
+        cacheService.addCardToSet(card.getId().toString());
         
         return card;
     }
 
     @Override
     public Card getCard(UUID id) {
-        Card card = cacheService.hget(CARDS_KEY, id.toString(), Card.class);
+        String cardKey = getCardKey(id);
+        Card card = buildCardFromHash(cardKey);
         if (card == null) {
             throw new IllegalArgumentException("Card not found: " + id);
         }
@@ -68,45 +123,69 @@ public class CardServiceImpl implements CardService {
 
     @Override
     public Card updateBalance(UUID id, BigDecimal amount) {
-        Card card = getCard(id);
+        String cardKey = getCardKey(id);
+        Card card = buildCardFromHash(cardKey);
+        if (card == null) {
+            throw new IllegalArgumentException("Card not found: " + id);
+        }
+
         BigDecimal newBalance = card.getBalance().add(amount);
-        
         if (newBalance.compareTo(BigDecimal.ZERO) < 0) {
             throw new IllegalArgumentException("Insufficient balance");
         }
-        
+
+        // 更新余额和更新时间
+        long updatedAt = System.currentTimeMillis();
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("balance", newBalance.toString());
+        updates.put("updatedAt", String.valueOf(updatedAt));
+        cacheService.hmset(cardKey, updates);
+
+        // 更新内存中的对象
         card.setBalance(newBalance);
-        // 更新时间
-        card.setUpdatedAt(System.currentTimeMillis());
-        
-        // 更新卡片信息
-        cacheService.hset(CARDS_KEY, id.toString(), card);
+        card.setUpdatedAt(updatedAt);
         
         return card;
     }
 
     @Override
     public Card updateStudentName(UUID id, String studentName) {
-        Card card = getCard(id);
+        String cardKey = getCardKey(id);
+        Card card = buildCardFromHash(cardKey);
+        if (card == null) {
+            throw new IllegalArgumentException("Card not found: " + id);
+        }
+
+        // 更新学生姓名和更新时间
+        long updatedAt = System.currentTimeMillis();
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("studentName", studentName);
+        updates.put("updatedAt", String.valueOf(updatedAt));
+        cacheService.hmset(cardKey, updates);
+
+        // 更新内存中的对象
         card.setStudentName(studentName);
-        card.setUpdatedAt(System.currentTimeMillis());
-        
-        // 更新卡片信息
-        cacheService.hset(CARDS_KEY, id.toString(), card);
+        card.setUpdatedAt(updatedAt);
         
         return card;
     }
 
     @Override
     public void deleteCard(UUID id) {
-        // 先获取卡片信息，确认卡片存在
-        Card card = getCard(id);
+        String cardKey = getCardKey(id);
+        Card card = buildCardFromHash(cardKey);
+        if (card == null) {
+            throw new IllegalArgumentException("Card not found: " + id);
+        }
+        
+        // 删除卡片信息
+        cacheService.hdel(cardKey, "id", "studentId", "studentName", "balance", "status", "createdAt", "updatedAt");
         
         // 删除学生ID到卡片ID的映射
         cacheService.hdel(STUDENT_CARDS_KEY, card.getStudentId());
         
-        // 删除卡片信息
-        cacheService.hdel(CARDS_KEY, id.toString());
+        // 从卡片集合中移除
+        cacheService.removeCardFromSet(id.toString());
     }
 
     @Override
@@ -117,11 +196,8 @@ public class CardServiceImpl implements CardService {
             throw new IllegalArgumentException("No card found for student: " + studentId);
         }
         
-        // 删除卡片信息
-        cacheService.hdel(CARDS_KEY, cardId);
-        
-        // 删除学生ID到卡片ID的映射
-        cacheService.hdel(STUDENT_CARDS_KEY, studentId);
+        // 删除卡片
+        deleteCard(UUID.fromString(cardId));
     }
 
     @Override
@@ -152,12 +228,19 @@ public class CardServiceImpl implements CardService {
 
     @Override
     public Page<Card> getAllCards(Integer page, Integer size, String studentId, String studentName) {
-        // 获取所有卡片
-        Map<String, Card> allCards = cacheService.hgetAll(CARDS_KEY, Card.class);
-        List<Card> cardList = new ArrayList<>(allCards.values());
-
-        // 应用筛选条件
-        List<Card> filteredCards = cardList.stream()
+        // 从集合中获取所有卡片ID
+        Set<Object> cardIds = cacheService.getAllCardIds();
+        
+        // 获取所有卡片并应用筛选条件
+        List<Card> filteredCards = cardIds.stream()
+                .map(id -> {
+                    try {
+                        return getCard(UUID.fromString(id.toString()));
+                    } catch (Exception e) {
+                        return null;
+                    }
+                })
+                .filter(Objects::nonNull)
                 .filter(card -> studentId == null || studentId.isEmpty() || card.getStudentId().contains(studentId))
                 .filter(card -> studentName == null || studentName.isEmpty() || card.getStudentName().contains(studentName))
                 .sorted(Comparator.comparing(Card::getCreatedAt).reversed())
