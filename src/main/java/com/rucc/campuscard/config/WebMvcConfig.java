@@ -33,16 +33,13 @@ public class WebMvcConfig implements WebMvcConfigurer {
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
         // Swagger UI资源映射
-        registry.addResourceHandler("/swagger-ui.html")
-                .addResourceLocations("classpath:/META-INF/resources/");
-
         registry.addResourceHandler("/swagger-ui/**")
-                .addResourceLocations("classpath:/META-INF/resources/webjars/swagger-ui/")
+                .addResourceLocations("classpath:/META-INF/resources/webjars/springdoc-openapi-ui/")
                 .resourceChain(false);
 
+        // API文档端点
         registry.addResourceHandler("/v3/api-docs/**")
-                .addResourceLocations("classpath:/META-INF/resources/")
-                .resourceChain(false);
+                .addResourceLocations("classpath:/META-INF/resources/v3/api-docs/");
 
         registry.addResourceHandler("/webjars/**")
                 .addResourceLocations("classpath:/META-INF/resources/webjars/")

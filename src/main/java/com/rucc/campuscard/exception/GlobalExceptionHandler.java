@@ -1,12 +1,15 @@
 package com.rucc.campuscard.exception;
 
 import com.rucc.campuscard.common.ApiResponse;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.BindException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -17,6 +20,7 @@ import java.util.stream.Collectors;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ApiResponse<Object>> handleHttpMessageNotReadableException(HttpMessageNotReadableException ex) {
@@ -87,7 +91,13 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ApiResponse<Object>> handleAllUncaughtException(Exception ex) {
+    public ResponseEntity<ApiResponse<Object>> handleAllUncaughtException(Exception ex, HttpServletRequest request) {
+        String path = request.getRequestURI();
+        log.error("拦截到异常，请求路径: {}, 异常信息: {}", path, ex.getMessage()); // 添加日志
+        if (path.contains("/swagger") || path.contains("/v3/api-docs")) {
+            // 对于Swagger相关请求，返回null让框架处理
+            return null;
+        }
         return ResponseEntity
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(ApiResponse.error(HttpStatus.INTERNAL_SERVER_ERROR.value(), "服务器内部错误"));
