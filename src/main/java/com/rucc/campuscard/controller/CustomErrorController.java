@@ -9,32 +9,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
-
 @RestController
-@Tag(name = "错误处理", description = "统一的系统错误处理接口")
 public class CustomErrorController implements ErrorController {
 
-    @io.swagger.v3.oas.annotations.Operation(summary = "统一错误处理", description = "处理系统中的各种错误情况，返回标准化的错误响应")
-    @io.swagger.v3.oas.annotations.responses.ApiResponses(value = {
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "请求参数错误", 
-            content = @io.swagger.v3.oas.annotations.media.Content(schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = com.rucc.campuscard.common.ApiResponse.class))),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "未经授权的访问",
-            content = @io.swagger.v3.oas.annotations.media.Content(schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = com.rucc.campuscard.common.ApiResponse.class))),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "没有权限访问该资源",
-            content = @io.swagger.v3.oas.annotations.media.Content(schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = com.rucc.campuscard.common.ApiResponse.class))),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "请求的资源不存在",
-            content = @io.swagger.v3.oas.annotations.media.Content(schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = com.rucc.campuscard.common.ApiResponse.class))),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "405", description = "不支持的请求方法",
-            content = @io.swagger.v3.oas.annotations.media.Content(schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = com.rucc.campuscard.common.ApiResponse.class))),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "415", description = "不支持的媒体类型",
-            content = @io.swagger.v3.oas.annotations.media.Content(schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = com.rucc.campuscard.common.ApiResponse.class))),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "429", description = "请求过于频繁",
-            content = @io.swagger.v3.oas.annotations.media.Content(schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = com.rucc.campuscard.common.ApiResponse.class))),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "服务器内部错误",
-            content = @io.swagger.v3.oas.annotations.media.Content(schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = com.rucc.campuscard.common.ApiResponse.class)))
-    })
     @RequestMapping("/error")
     public ResponseEntity<ApiResponse<Void>> handleError(HttpServletRequest request) {
         Object status = request.getAttribute(RequestDispatcher.ERROR_STATUS_CODE);

@@ -1,31 +1,16 @@
 package com.rucc.campuscard.dto;
 
-import io.swagger.v3.oas.annotations.media.Schema;
 import java.math.BigDecimal;
 import java.util.UUID;
 
-@Schema(description = "校园卡DTO")
 public class CardDTO {
 
-    @Schema(description = "卡片ID")
     private UUID id;
-
-    @Schema(description = "学号")
     private String studentId;
-
-    @Schema(description = "学生姓名")
     private String studentName;
-
-    @Schema(description = "卡片状态")
     private String status;
-
-    @Schema(description = "卡片余额")
     private BigDecimal balance;
-
-    @Schema(description = "创建时间（时间戳）")
     private Long createdAt;
-
-    @Schema(description = "更新时间（时间戳）")
     private Long updatedAt;
 
     public UUID getId() {
