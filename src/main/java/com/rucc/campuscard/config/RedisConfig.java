@@ -24,17 +24,15 @@ public class RedisConfig {
         RedisTemplate<String, Object> template = new RedisTemplate<>();
         template.setConnectionFactory(connectionFactory);
 
-        // 使用StringRedisSerializer来序列化和反序列化redis的key值
-        template.setKeySerializer(new StringRedisSerializer());
+        // 使用StringRedisSerializer来序列化和反序列化所有的key和value
+        StringRedisSerializer stringSerializer = new StringRedisSerializer();
+        template.setKeySerializer(stringSerializer);
+        template.setValueSerializer(stringSerializer);
+        template.setHashKeySerializer(stringSerializer);
+        template.setHashValueSerializer(stringSerializer);
 
-        // 使用GenericJackson2JsonRedisSerializer来序列化和反序列化redis的value值
-        GenericJackson2JsonRedisSerializer jsonRedisSerializer = new GenericJackson2JsonRedisSerializer(redisObjectMapper);
-        template.setValueSerializer(jsonRedisSerializer);
-
-        // Hash的key也采用StringRedisSerializer的序列化方式
-        template.setHashKeySerializer(new StringRedisSerializer());
-        // Hash的value也采用GenericJackson2JsonRedisSerializer的序列化方式
-        template.setHashValueSerializer(jsonRedisSerializer);
+        // 设置默认序列化器为StringRedisSerializer
+        template.setDefaultSerializer(stringSerializer);
 
         template.afterPropertiesSet();
         return template;

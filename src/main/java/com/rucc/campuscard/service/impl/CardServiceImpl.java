@@ -18,7 +18,6 @@ import org.springframework.data.domain.PageRequest;
 @Service
 public class CardServiceImpl implements CardService {
 
-    private static final String CARD_PREFIX = "card:";
     private static final String STUDENT_CARDS_KEY = "student_cards";
 
     private final CacheService cacheService;
@@ -33,7 +32,8 @@ public class CardServiceImpl implements CardService {
      * @return Redis键
      */
     private String getCardKey(UUID cardId) {
-        return CARD_PREFIX + cardId.toString();
+        // 使用CacheService中的方法来确保键格式正确
+        return CacheService.getCardKey(cardId.toString());
     }
 
     /**
@@ -61,15 +61,17 @@ public class CardServiceImpl implements CardService {
 
     /**
      * 将Card对象转换为Hash字段映射
+     * 确保所有值都是原始字符串，不包含额外的引号
      * @param card Card对象
      * @return Hash字段映射
      */
     private Map<String, Object> cardToHashMap(Card card) {
         Map<String, Object> hash = new HashMap<>();
+        // 直接使用toString()方法，不添加额外的引号
         hash.put("id", card.getId().toString());
         hash.put("studentId", card.getStudentId());
         hash.put("studentName", card.getStudentName());
-        hash.put("balance", card.getBalance().toString());
+        hash.put("balance", card.getBalance().setScale(2, RoundingMode.HALF_UP).toString());
         hash.put("status", card.getStatus().toString());
         hash.put("createdAt", String.valueOf(card.getCreatedAt()));
         hash.put("updatedAt", String.valueOf(card.getUpdatedAt()));
@@ -89,15 +91,17 @@ public class CardServiceImpl implements CardService {
             balance.setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO;
         Card card = new Card(studentId, studentName, initialBalance);
         
-        // 保存卡片信息到Hash表
+        // 保存卡片信息到Hash表，使用纯字符串值
         String cardKey = getCardKey(card.getId());
-        cacheService.hmset(cardKey, cardToHashMap(card));
+        Map<String, Object> cardData = cardToHashMap(card);
+        cacheService.hmset(cardKey, cardData);
         
-        // 保存学生ID到卡片ID的映射
-        cacheService.hset(STUDENT_CARDS_KEY, studentId, card.getId().toString());
+        // 保存学生ID到卡片ID的映射，确保ID是纯字符串
+        String cardId = card.getId().toString();
+        cacheService.hset(STUDENT_CARDS_KEY, studentId, cardId);
         
-        // 添加卡片ID到集合
-        cacheService.addCardToSet(card.getId().toString());
+        // 添加卡片ID到集合，确保ID是纯字符串
+        cacheService.addCardToSet(cardId);
         
         return card;
     }
@@ -235,7 +239,9 @@ public class CardServiceImpl implements CardService {
         List<Card> filteredCards = cardIds.stream()
                 .map(id -> {
                     try {
-                        return getCard(UUID.fromString(id.toString()));
+                        // 清理cardId，移除可能存在的引号
+                        String cardId = id.toString().replaceAll("^\"|\"$", "");
+                        return getCard(UUID.fromString(cardId));
                     } catch (Exception e) {
                         return null;
                     }
