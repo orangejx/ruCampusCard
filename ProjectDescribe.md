@@ -158,78 +158,78 @@ cat /proc/sys/kernel/random/uuid
 #### 3.2.2. 添加卡片详情
 ```bash 
 hset card:{"{uuid}"} id "{uuid}" studentId "{studentId}" studentName "{name}" balance "0.00" status "ACTIVE" createdAt "{timestamp}" updatedAt "{timestamp}"
-
-# example
+```
+演示案例
+```bash
 hset card:{54b64c64-4781-40a9-9ffa-88156ba3678a} id "54b64c64-4781-40a9-9ffa-88156ba3678a" studentId "103" studentName "test" balance "0.00" status "ACTIVE" createdAt "1749298908000" updatedAt "1749298908000"
 ```
 
 #### 3.2.3. 添加到卡片集合 
 ```bash 
 sadd cards:all {uuid}
-
-#example
+```
+演示案例
+```bash
 sadd cards:all 54b64c64-4781-40a9-9ffa-88156ba3678a
 ```
 
 #### 3.2.4 添加学生映射
 ```bash 
 hset student_cards {studentId} "{uuid}"
-
-#example
-```bash 
+```
+演示案例
+```bash
 hset student_cards 103 "54b64c64-4781-40a9-9ffa-88156ba3678a"
 ```
 
 #### 3.2.5. 修改卡片余额
 ```bash 
 hset card:{uuid} balance "{newBalance}" updatedAt "{timestamp}"
-
-#example
+```
+演示案例
+```bash
 hset card:{54b64c64-4781-40a9-9ffa-88156ba3678a} balance "100" updatedAt "1749298908000"
 ```
 
 #### 3.2.6. 修改卡片状态
 ```bash 
 hset card:{uuid} status "{newStatus}" updatedAt "{timestamp}"
-
-#example
-#set card status to ACTIVE
+```
+更新卡状态到"正常"
+```bash
 hset card:{54b64c64-4781-40a9-9ffa-88156ba3678a} status "ACTIVE" updatedAt "1749298908000"
-#set card status to INACTIVE
+```
+更新卡状态到"删除"
+```bash
 hset card:{54b64c64-4781-40a9-9ffa-88156ba3678a} status "INACTIVE" updatedAt "1749298908000"
 ```
 
 ### 3.3. 删除数据
 
-#### 3.3.1. 获取学生 Id (可选) 
-```bash 
-hget card:{uuid} studentId
-
-#example
-hget card:{54b64c64-4781-40a9-9ffa-88156ba3678a} studentId
-```
-
-#### 3.3.2. 从集合中删除 
+#### 3.3.1. 从集合中删除 
 ```bash 
 srem cards:all {uuid}
-
-#example
+```
+演示案例
+```bash
 srem cards:all {54b64c64-4781-40a9-9ffa-88156ba3678a}
 ```
 
-#### 3.3.3. 删除学生映射
+#### 3.3.2. 删除学生映射
 ```bash
 hdel student_cards {studentId}
-
-#example
+```
+演示案例
+```bash
 hdel student_cards 103
 ```
 
-#### 3.3.4. 删除卡片详情
+#### 3.3.3. 删除卡片详情
 ```bash
 del card:{uuid} 
-
-#example
+```
+演示案例
+```bash
 del card:{54b64c64-4781-40a9-9ffa-88156ba3678a} 
 ```
 
