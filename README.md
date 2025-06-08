@@ -76,3 +76,111 @@ From highest to lowest:
 | spring.data.redis.port | Redis port | 6379 |
 | spring.data.redis.database | Redis DB index | 10 |
 | spring.data.redis.password | Redis password (optional) | (none) |
+
+## Test Data Guide
+
+### Adding Test Data Manually
+
+You can use Redis CLI to manually add test data for development and testing purposes.
+
+#### 1. Connect to Redis CLI
+
+```bash
+# Connect to Redis on localhost
+redis-cli 
+
+# Select the correct database (default is 10)
+SELECT 10
+```
+
+#### 1.1 Connect to Redis CLI (Cluster)
+
+```bash
+# Connect to Redis on localhost
+redis-cli -c 
+
+```
+
+#### 2. Add Test Card Data
+
+Here's an example of adding a test campus card:
+
+```redis
+# Add card details
+hset card:{54b64c64-4781-40a9-9ffa-88156ba3678a} \
+    id "54b64c64-4781-40a9-9ffa-88156ba3678a" \
+    studentId "103" \
+    studentName "test" \
+    balance "0.00" \
+    status "ACTIVE" \
+    createdAt "1749298908000" \
+    updatedAt "1749298908000"
+
+# Add card ID to the set of all cards
+sadd cards:all "54b64c64-4781-40a9-9ffa-88156ba3678a"
+
+# Map student ID to card ID
+hset student_cards 103 "54b64c64-4781-40a9-9ffa-88156ba3678a"
+```
+
+#### 3. Verify Test Data
+
+```redis
+# Check card details
+hgetall card:{54b64c64-4781-40a9-9ffa-88156ba3678a}
+
+# Check if card ID exists in the set
+smembers cards:all
+
+# Check student-card mapping
+hget student_cards 103
+```
+
+#### 4. Clean Test Data
+
+```redis
+# Clean specific test data
+del card:{54b64c64-4781-40a9-9ffa-88156ba3678a}
+srem cards:all "54b64c64-4781-40a9-9ffa-88156ba3678a"
+hdel student_cards 103
+
+# Or clean all data in current database
+FLUSHDB
+
+# Or clean all databases (use with caution)
+FLUSHALL
+```
+
+Note: When adding test data manually, make sure to:
+1. Use the correct database number (default is 10)
+2. Follow the exact data format (no extra quotes)
+3. Use valid UUIDs for card IDs
+4. Use consistent timestamp format for dates
+
+#### 5. Verify Through API
+
+After adding test data, you can verify it through the API endpoints:
+
+```bash
+# Get card by ID
+curl -X GET "http://localhost:8080/api/v1/cards/54b64c64-4781-40a9-9ffa-88156ba3678a"
+
+# Get card by student ID
+curl -X GET "http://localhost:8080/api/v1/cards/student/103"
+
+# Check card balance
+curl -X GET "http://localhost:8080/api/v1/cards/54b64c64-4781-40a9-9ffa-88156ba3678a/balance"
+```
+
+Expected response for card details:
+```json
+{
+  "id": "54b64c64-4781-40a9-9ffa-88156ba3678a",
+  "studentId": "103",
+  "studentName": "test",
+  "balance": "0.00",
+  "status": "ACTIVE",
+  "createdAt": "2025-04-07T03:55:08.000+00:00",
+  "updatedAt": "2025-04-07T03:55:08.000+00:00"
+}
+```
